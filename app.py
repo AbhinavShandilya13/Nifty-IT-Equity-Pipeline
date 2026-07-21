@@ -217,8 +217,11 @@ with st.sidebar:
     pipeline = load_pipeline_status()
     if not pipeline.empty:
         run_time = pd.to_datetime(pipeline["execution_time"])
-        age_minutes = (datetime.now(timezone.utc) - run_time.tz_localize("UTC")).total_seconds() / 60 \
+        age_minutes = (datetime.now() - run_time).total_seconds() / 60 \
             if run_time.tzinfo is None else (datetime.now(timezone.utc) - run_time).total_seconds() / 60
+        # Quick fallback if timezone mismatch still causes negative values
+        if age_minutes < 0:
+            age_minutes = 0
         is_fresh = age_minutes < 24 * 60
         dot_color = "#1D9E75" if is_fresh else "#E24B4A" if age_minutes > 48 * 60 else "#EF9F27"
         relative = f"{int(age_minutes)} min ago" if age_minutes < 60 else f"{int(age_minutes // 60)} hr ago"

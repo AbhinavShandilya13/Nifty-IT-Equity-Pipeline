@@ -1,0 +1,34 @@
+[2026-07-21T18:35:40.858+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: nifty_it_equity_pipeline.run_ingestion manual__2026-07-21T18:35:37.670446+00:00 [queued]>
+[2026-07-21T18:35:40.865+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: nifty_it_equity_pipeline.run_ingestion manual__2026-07-21T18:35:37.670446+00:00 [queued]>
+[2026-07-21T18:35:40.866+0000] {taskinstance.py:2170} INFO - Starting attempt 1 of 2
+[2026-07-21T18:35:40.877+0000] {taskinstance.py:2191} INFO - Executing <Task(BashOperator): run_ingestion> on 2026-07-21 18:35:37.670446+00:00
+[2026-07-21T18:35:40.887+0000] {standard_task_runner.py:60} INFO - Started process 85 to run task
+[2026-07-21T18:35:40.892+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'nifty_it_equity_pipeline', 'run_ingestion', 'manual__2026-07-21T18:35:37.670446+00:00', '--job-id', '15', '--raw', '--subdir', 'DAGS_FOLDER/equity_pipeline_dag.py', '--cfg-path', '/tmp/tmprp5mbdxy']
+[2026-07-21T18:35:40.898+0000] {standard_task_runner.py:88} INFO - Job 15: Subtask run_ingestion
+[2026-07-21T18:35:40.985+0000] {task_command.py:423} INFO - Running <TaskInstance: nifty_it_equity_pipeline.run_ingestion manual__2026-07-21T18:35:37.670446+00:00 [running]> on host 1249c987a99b
+[2026-07-21T18:35:41.064+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='abhinav' AIRFLOW_CTX_DAG_ID='nifty_it_equity_pipeline' AIRFLOW_CTX_TASK_ID='run_ingestion' AIRFLOW_CTX_EXECUTION_DATE='2026-07-21T18:35:37.670446+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-07-21T18:35:37.670446+00:00'
+[2026-07-21T18:35:41.067+0000] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2026-07-21T18:35:41.069+0000] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'python /opt/***/scripts/ingest.py']
+[2026-07-21T18:35:41.089+0000] {subprocess.py:86} INFO - Output:
+[2026-07-21T18:35:42.130+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:42,130 - INFO - Starting Ingestion Pipeline...
+[2026-07-21T18:35:42.131+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:42,130 - INFO - Fetching history for INFY.NS...
+[2026-07-21T18:35:43.576+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:43,576 - INFO - Successfully ingested 30 price records for INFY.NS
+[2026-07-21T18:35:43.577+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:43,576 - INFO - Fetching history for HCLTECH.NS...
+[2026-07-21T18:35:43.919+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:43,919 - INFO - Successfully ingested 30 price records for HCLTECH.NS
+[2026-07-21T18:35:43.920+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:43,919 - INFO - Fetching history for TECHM.NS...
+[2026-07-21T18:35:44.258+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:44,258 - INFO - Successfully ingested 30 price records for TECHM.NS
+[2026-07-21T18:35:44.259+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:44,258 - INFO - Fetching history for WIPRO.NS...
+[2026-07-21T18:35:44.618+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:44,618 - INFO - Successfully ingested 30 price records for WIPRO.NS
+[2026-07-21T18:35:44.625+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:44,625 - INFO - Fetching financials for INFY.NS...
+[2026-07-21T18:35:45.162+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:45,162 - INFO - Successfully ingested financials for INFY.NS
+[2026-07-21T18:35:45.163+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:45,162 - INFO - Fetching financials for HCLTECH.NS...
+[2026-07-21T18:35:45.703+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:45,703 - INFO - Successfully ingested financials for HCLTECH.NS
+[2026-07-21T18:35:45.703+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:45,703 - INFO - Fetching financials for TECHM.NS...
+[2026-07-21T18:35:46.254+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:46,254 - INFO - Successfully ingested financials for TECHM.NS
+[2026-07-21T18:35:46.255+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:46,254 - INFO - Fetching financials for WIPRO.NS...
+[2026-07-21T18:35:46.961+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:46,960 - INFO - Successfully ingested financials for WIPRO.NS
+[2026-07-21T18:35:46.965+0000] {subprocess.py:93} INFO - 2026-07-21 18:35:46,964 - INFO - Ingestion Pipeline Complete.
+[2026-07-21T18:35:47.171+0000] {subprocess.py:97} INFO - Command exited with return code 0
+[2026-07-21T18:35:47.202+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=nifty_it_equity_pipeline, task_id=run_ingestion, execution_date=20260721T183537, start_date=20260721T183540, end_date=20260721T183547
+[2026-07-21T18:35:47.247+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2026-07-21T18:35:47.266+0000] {taskinstance.py:3280} INFO - 1 downstream tasks scheduled from follow-on schedule check

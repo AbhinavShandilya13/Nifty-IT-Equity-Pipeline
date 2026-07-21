@@ -1,0 +1,28 @@
+[2026-07-21T18:04:11.620+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: nifty_it_equity_pipeline.run_ingestion manual__2026-07-21T17:59:07.557023+00:00 [queued]>
+[2026-07-21T18:04:11.627+0000] {taskinstance.py:1956} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: nifty_it_equity_pipeline.run_ingestion manual__2026-07-21T17:59:07.557023+00:00 [queued]>
+[2026-07-21T18:04:11.628+0000] {taskinstance.py:2170} INFO - Starting attempt 2 of 2
+[2026-07-21T18:04:11.640+0000] {taskinstance.py:2191} INFO - Executing <Task(BashOperator): run_ingestion> on 2026-07-21 17:59:07.557023+00:00
+[2026-07-21T18:04:11.649+0000] {standard_task_runner.py:60} INFO - Started process 209 to run task
+[2026-07-21T18:04:11.654+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'nifty_it_equity_pipeline', 'run_ingestion', 'manual__2026-07-21T17:59:07.557023+00:00', '--job-id', '7', '--raw', '--subdir', 'DAGS_FOLDER/equity_pipeline_dag.py', '--cfg-path', '/tmp/tmpgmb6nkuw']
+[2026-07-21T18:04:11.658+0000] {standard_task_runner.py:88} INFO - Job 7: Subtask run_ingestion
+[2026-07-21T18:04:11.712+0000] {task_command.py:423} INFO - Running <TaskInstance: nifty_it_equity_pipeline.run_ingestion manual__2026-07-21T17:59:07.557023+00:00 [running]> on host c9996548e0c8
+[2026-07-21T18:04:11.783+0000] {taskinstance.py:2480} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='abhinav' AIRFLOW_CTX_DAG_ID='nifty_it_equity_pipeline' AIRFLOW_CTX_TASK_ID='run_ingestion' AIRFLOW_CTX_EXECUTION_DATE='2026-07-21T17:59:07.557023+00:00' AIRFLOW_CTX_TRY_NUMBER='2' AIRFLOW_CTX_DAG_RUN_ID='manual__2026-07-21T17:59:07.557023+00:00'
+[2026-07-21T18:04:11.785+0000] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2026-07-21T18:04:11.787+0000] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'python /opt/***/scripts/ingest.py']
+[2026-07-21T18:04:11.803+0000] {subprocess.py:86} INFO - Output:
+[2026-07-21T18:04:11.842+0000] {subprocess.py:93} INFO - Traceback (most recent call last):
+[2026-07-21T18:04:11.843+0000] {subprocess.py:93} INFO -   File "/opt/***/scripts/ingest.py", line 2, in <module>
+[2026-07-21T18:04:11.843+0000] {subprocess.py:93} INFO -     import yfinance as yf
+[2026-07-21T18:04:11.844+0000] {subprocess.py:93} INFO - ModuleNotFoundError: No module named 'yfinance'
+[2026-07-21T18:04:11.845+0000] {subprocess.py:97} INFO - Command exited with return code 1
+[2026-07-21T18:04:11.857+0000] {taskinstance.py:2698} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/bash.py", line 212, in execute
+    raise AirflowException(
+airflow.exceptions.AirflowException: Bash command failed. The command returned a non-zero exit code 1.
+[2026-07-21T18:04:11.860+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=nifty_it_equity_pipeline, task_id=run_ingestion, execution_date=20260721T175907, start_date=20260721T180411, end_date=20260721T180411
+[2026-07-21T18:04:11.873+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 7 for task run_ingestion (Bash command failed. The command returned a non-zero exit code 1.; 209)
+[2026-07-21T18:04:11.906+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2026-07-21T18:04:11.931+0000] {taskinstance.py:3280} INFO - 0 downstream tasks scheduled from follow-on schedule check
