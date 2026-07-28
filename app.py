@@ -11,16 +11,15 @@ from dotenv import load_dotenv
 # CONFIG
 # ----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="NIFTY IT Research",
+    page_title="NIFTY IT Research | Pipeline Dashboard",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 TICKERS = ["INFY.NS", "TECHM.NS", "WIPRO.NS", "HCLTECH.NS"]
 SECTOR_LABEL = "IT services"
 
-# Map ticker -> a human display name (edit as needed)
 TICKER_NAMES = {
     "INFY.NS": "Infosys",
     "TECHM.NS": "Tech Mahindra",
@@ -28,14 +27,57 @@ TICKER_NAMES = {
     "HCLTECH.NS": "HCLTech",
 }
 
-POSITIVE = "#1D9E75"
-NEGATIVE = "#E24B4A"
-ACCENT = "#378ADD"
-MUTED = "#888780"
-BENCHMARK = "#D4537E"
+POSITIVE = "#78b874"
+NEGATIVE = "#d98a7a"
+ACCENT = "#5f9c5c"
+MUTED = "#a9c2bf"
+BENCHMARK = "#6f8b88"
 
 # ----------------------------------------------------------------------------
-# DB CONNECTION
+# GLOBAL CSS THEME
+# ----------------------------------------------------------------------------
+GLOBAL_CSS = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root { --bg-0:#0a2023; --bg-1:#0d2b2e; --card:#123338; --card-border:rgba(150,190,185,0.14); --line:rgba(150,190,185,0.08); --text-hi:#eef5f3; --text-mid:#a9c2bf; --text-lo:#6f8b88; --green:#5f9c5c; --green-hi:#78b874; --red:#a85a4a; }
+header[data-testid="stHeader"] { display: none; }
+section[data-testid="stSidebar"] { display: none; }
+.block-container { padding-top: 2rem !important; padding-bottom: 4rem !important; max-width: 1200px !important; }
+.stApp { background: repeating-linear-gradient(115deg, rgba(150,190,185,0.035) 0px, rgba(150,190,185,0.035) 1px, transparent 1px, transparent 90px), linear-gradient(180deg, var(--bg-1), var(--bg-0) 60%) !important; background-color: var(--bg-0) !important; font-family: 'Inter', sans-serif !important; color: var(--text-hi) !important; }
+h1, h2, h3 { font-family: 'Oswald', sans-serif !important; color: var(--text-hi) !important; }
+div[data-testid="stTabs"] button { font-family: 'Oswald', sans-serif; font-size: 20px; letter-spacing: 1px; color: var(--text-lo); }
+div[data-testid="stTabs"] button[aria-selected="true"] { color: var(--green-hi) !important; border-bottom-color: var(--green-hi) !important; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 15px; margin-bottom: 30px; }
+.brand { font-family: 'Oswald', sans-serif; font-size: 24px; font-weight: 600; letter-spacing: 2px; }
+.status-pill { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(180deg, var(--green-hi), var(--green)); color: #0a1f10; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; padding: 6px 16px; border-radius: 999px; }
+.status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #0a1f10; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+.hero { background: rgba(10,32,35,0.4); border: 1px solid var(--card-border); border-radius: 16px; padding: 30px; margin-bottom: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.hero-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green-hi); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.hero h1 { margin-top: 0; font-size: 32px; line-height: 1.3; max-width: 800px; }
+.hero p { color: var(--text-mid); font-size: 15px; line-height: 1.6; max-width: 800px; margin-bottom: 20px; }
+.hero-stack { display: flex; gap: 12px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.hero-stack span { background: rgba(150,190,185,0.08); border: 1px solid var(--card-border); padding: 4px 10px; border-radius: 4px; color: var(--text-mid); }
+.kpi-card { background-color: var(--card); border-radius: 14px; padding: 20px; border: 1px solid var(--card-border); box-shadow: 0 4px 15px rgba(0,0,0,0.1); height: 100%; }
+.kpi-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-lo); margin-bottom: 8px; }
+.kpi-value { font-family: 'Oswald', sans-serif; font-size: 32px; font-weight: 600; color: var(--text-hi); }
+.footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-lo); }
+.footer a { color: var(--green-hi); text-decoration: none; margin-left: 15px; font-weight: 600; transition: color 0.2s; }
+.footer a:hover { color: var(--text-hi); }
+@media (max-width: 768px) {
+  .hero { padding: 20px; }
+  .hero h1 { font-size: 24px; }
+  .top-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .footer { flex-direction: column; gap: 12px; text-align: center; }
+  .footer a { margin-left: 0; margin: 0 10px; }
+}
+</style>
+"""
+st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+
+# ----------------------------------------------------------------------------
+# DB CONNECTION & DATA FETCHING
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def get_engine():
@@ -54,372 +96,185 @@ engine = get_engine()
 
 @st.cache_data(ttl=300)
 def load_price_history(ticker: str, days: int = 30) -> pd.DataFrame:
-    query = text(
-        """
+    query = text("""
         SELECT date, close_price as close, rolling_7d_avg, data_status
         FROM analytics_summary
         WHERE ticker = :ticker
         ORDER BY date DESC
         LIMIT :days
-        """
-    )
+    """)
     df = pd.read_sql(query, engine, params={"ticker": ticker, "days": days})
     return df.sort_values("date").reset_index(drop=True)
 
 @st.cache_data(ttl=300)
 def load_latest_metrics(ticker: str) -> pd.Series:
-    query = text(
-        """
+    query = text("""
         SELECT close_price as close, rolling_7d_avg, net_profit_margin_pct, pe_ratio, date, data_status
         FROM analytics_summary
         WHERE ticker = :ticker
         ORDER BY date DESC
         LIMIT 1
-        """
-    )
+    """)
     df = pd.read_sql(query, engine, params={"ticker": ticker})
     return df.iloc[0] if not df.empty else pd.Series(dtype="float64")
 
 @st.cache_data(ttl=300)
 def load_sector_index(days: int = 30) -> pd.DataFrame:
-    """Average close price across all tracked tickers, per day, as a sector benchmark line."""
-    query = text(
-        """
+    query = text("""
         SELECT date, AVG(close_price) AS sector_avg_close
         FROM analytics_summary
         WHERE ticker = ANY(:tickers)
         GROUP BY date
         ORDER BY date DESC
         LIMIT :days
-        """
-    )
+    """)
     df = pd.read_sql(query, engine, params={"tickers": TICKERS, "days": days})
     return df.sort_values("date").reset_index(drop=True)
 
-@st.cache_data(ttl=300)
-def load_sector_avg_pe() -> float:
-    query = text(
-        """
-        SELECT AVG(pe_ratio) AS avg_pe
-        FROM (
-            SELECT DISTINCT ON (ticker) ticker, pe_ratio
-            FROM analytics_summary
-            WHERE ticker = ANY(:tickers)
-            ORDER BY ticker, date DESC
-        ) latest
-        """
-    )
-    df = pd.read_sql(query, engine, params={"tickers": TICKERS})
-    return float(df["avg_pe"].iloc[0]) if not df.empty else float("nan")
-
 @st.cache_data(ttl=60)
 def load_pipeline_status() -> pd.Series:
-    query = text(
-        """
-        SELECT execution_time, status
-        FROM pipeline_logs
-        ORDER BY run_id DESC
-        LIMIT 1
-        """
-    )
+    query = text("SELECT execution_time, status FROM pipeline_logs ORDER BY run_id DESC LIMIT 1")
     df = pd.read_sql(query, engine)
     return df.iloc[0] if not df.empty else pd.Series(dtype="object")
 
 # ----------------------------------------------------------------------------
-# STYLING
+# TOP BAR & HERO SECTION
 # ----------------------------------------------------------------------------
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #0e1117;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #12151c;
-    }
-    div[data-baseweb="select"] > div {
-        background-color: #161a23 !important;
-        border-color: #2a2f3a !important;
-        border-radius: 8px !important;
-    }
-    div[data-baseweb="select"] > div:hover {
-        border-color: #378ADD !important;
-    }
-    .kpi-card {
-        background-color: #161a23;
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        border: 1px solid #232733;
-    }
-    .kpi-label {
-        font-size: 12px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #8b8f9c;
-        margin-bottom: 4px;
-    }
-    .kpi-value {
-        font-size: 26px;
-        font-weight: 600;
-        color: #e8eaed;
-    }
-    .badge {
-        display: inline-block;
-        font-size: 11px;
-        padding: 2px 10px;
-        border-radius: 999px;
-        margin-left: 8px;
-        vertical-align: middle;
-    }
-    .badge-nse {
-        background: rgba(55, 138, 221, 0.15);
-        color: #6fb3ff;
-    }
-    .badge-sector {
-        background: #1e2230;
-        color: #8b8f9c;
-        border: 1px solid #2a2f3a;
-    }
-    .badge-pe {
-        background: #1e2230;
-        color: #8b8f9c;
-        border-radius: 6px;
-        font-size: 11px;
-        padding: 2px 8px;
-    }
-    .status-dot {
-        height: 8px;
-        width: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 6px;
-    }
-    .footer {
-        border-top: 1px solid #232733;
-        margin-top: 2rem;
-        padding-top: 0.75rem;
-        font-size: 11px;
-        color: #6b6f7a;
-        display: flex;
-        justify-content: space-between;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ----------------------------------------------------------------------------
-# SIDEBAR
-# ----------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("**Prepared by: Abhinav Shandilya**")
-
-    pipeline = load_pipeline_status()
-    if not pipeline.empty:
-        run_time = pd.to_datetime(pipeline["execution_time"])
-        age_minutes = (datetime.now() - run_time).total_seconds() / 60 \
-            if run_time.tzinfo is None else (datetime.now(timezone.utc) - run_time).total_seconds() / 60
-        # Quick fallback if timezone mismatch still causes negative values
-        if age_minutes < 0:
-            age_minutes = 0
-        is_fresh = age_minutes < 24 * 60
-        dot_color = "#1D9E75" if is_fresh else "#E24B4A" if age_minutes > 48 * 60 else "#EF9F27"
-        relative = f"{int(age_minutes)} min ago" if age_minutes < 60 else f"{int(age_minutes // 60)} hr ago"
-        st.markdown(
-            f'<span class="status-dot" style="background:{dot_color};"></span>'
-            f'<span style="font-size:13px; color:#c7cad1;">Synced {relative}</span>',
-            unsafe_allow_html=True,
-        )
+pipeline = load_pipeline_status()
+sync_text = "UNKNOWN"
+if not pipeline.empty:
+    run_time = pd.to_datetime(pipeline["execution_time"])
+    age_minutes = (datetime.now() - run_time).total_seconds() / 60 if run_time.tzinfo is None else (datetime.now(timezone.utc) - run_time).total_seconds() / 60
+    age_minutes = max(0, age_minutes)
+    if age_minutes < 60:
+        sync_text = f"SYNCED {int(age_minutes)}M AGO"
     else:
-        st.markdown(
-            '<span class="status-dot" style="background:#E24B4A;"></span>'
-            '<span style="font-size:13px; color:#c7cad1;">No pipeline runs found</span>',
-            unsafe_allow_html=True,
-        )
+        sync_text = f"SYNCED {int(age_minutes // 60)}H AGO"
 
-    st.markdown("---")
-    st.markdown("**📋 Select company**")
-    selected_ticker = st.selectbox("Company", TICKERS, index=TICKERS.index("HCLTECH.NS"))
-
-# ----------------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------------
-company_name = TICKER_NAMES.get(selected_ticker, selected_ticker)
-
-st.markdown(
-    f"""
-    <div style="display:flex; align-items:center; margin-bottom: 1.25rem;">
-        <span style="font-size:28px; font-weight:700; color:#e8eaed;">
-            📈 {selected_ticker} · {company_name}
-        </span>
-        <span class="badge badge-nse">NSE</span>
-        <span class="badge badge-sector">{SECTOR_LABEL}</span>
+st.markdown(f"""
+<div class="top-bar">
+    <div class="brand">NIFTY IT RESEARCH</div>
+    <div class="status-pill"><span class="dot"></span>LIVE · {sync_text}</div>
+</div>
+<div class="hero">
+    <div class="hero-eyebrow">Data Engineering Portfolio Project</div>
+    <h1>Transparent, auditable data pipeline tracking India's largest IT companies.</h1>
+    <p>This is a completely automated ETL pipeline. Data is extracted nightly via <b>Apache Airflow</b>, structurally graded for quality (handling API outages and market halts), transformed with <b>Pandas</b>, and Upserted into a <b>PostgreSQL</b> data warehouse. No manual entries, no black-box AI — just pure, fault-tolerant engineering.</p>
+    <div class="hero-stack">
+        <span>YFINANCE</span>
+        <span>PYTHON 3</span>
+        <span>POSTGRESQL</span>
+        <span>APACHE AIRFLOW</span>
+        <span>STREAMLIT</span>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+</div>
+""", unsafe_allow_html=True)
 
-latest = load_latest_metrics(selected_ticker)
-history = load_price_history(selected_ticker, days=30)
 
-if latest.empty or history.empty:
-    st.warning(
-        f"No recent data found for {selected_ticker}. The pipeline may not have run yet — "
-        "check `pipeline_logs` or re-run `ingest.py` / `transform.py`."
-    )
-else:
-    # ---- V2 Data Quality UI Alerts ----
-    status = latest.get('data_status', 'ACTUAL')
-    if status == 'IMPUTED_API_OUTAGE':
-        st.error("⚠️ **WARNING:** Today's price data is imputed due to an API outage. The values shown are carried forward from the previous trading day.")
-    elif status == 'MARKET_HALT':
-        st.warning("⏸️ **NOTICE:** Today's volume is zero. The stock may be halted or it is a non-trading day.")
+# ----------------------------------------------------------------------------
+# TABBED TICKER VIEW
+# ----------------------------------------------------------------------------
+tabs = st.tabs([ticker.replace(".NS", "") for ticker in TICKERS])
+sector_index = load_sector_index(days=30)
 
-    # ---- Day-over-day deltas ----
-    if len(history) >= 2:
-        prev_close = history["close"].iloc[-2]
-        latest_close = history["close"].iloc[-1]
-        close_delta_pct = ((latest_close - prev_close) / prev_close) * 100
-    else:
-        close_delta_pct = 0.0
+for idx, ticker in enumerate(TICKERS):
+    with tabs[idx]:
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        latest = load_latest_metrics(ticker)
+        history = load_price_history(ticker, days=30)
 
-    sector_avg_pe = load_sector_avg_pe()
+        if latest.empty or history.empty:
+            st.warning(f"No recent data found for {ticker}.")
+            continue
 
-    # ---- KPI ROW ----
-    col1, col2, col3 = st.columns(3)
+        # Data Quality Alerts
+        status = latest.get('data_status', 'ACTUAL')
+        if status == 'IMPUTED_API_OUTAGE':
+            st.error("⚠️ **DATA PROVENANCE ALERT:** Today's upstream API response was empty. The price shown has been mathematically forward-filled to maintain series continuity.")
+        elif status == 'MARKET_HALT':
+            st.warning("⏸️ **DATA PROVENANCE ALERT:** Trading volume was 0 today. The asset was halted or the market was closed.")
 
-    with col1:
-        with st.container():
-            st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-            st.markdown('<div class="kpi-label">Latest close price</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="kpi-value">₹{latest["close"]:.2f}</div>', unsafe_allow_html=True)
+        if len(history) >= 2:
+            prev_close = history["close"].iloc[-2]
+            latest_close = history["close"].iloc[-1]
+            close_delta_pct = ((latest_close - prev_close) / prev_close) * 100
+        else:
+            close_delta_pct = 0.0
+
+        # KPI Cards
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
             arrow = "▲" if close_delta_pct >= 0 else "▼"
             color = POSITIVE if close_delta_pct >= 0 else NEGATIVE
-            st.markdown(
-                f'<span style="color:{color}; font-size:13px;">{arrow} {abs(close_delta_pct):.2f}%</span>',
-                unsafe_allow_html=True,
-            )
-            spark = go.Figure(
-                go.Scatter(
-                    y=history["close"].tail(7),
-                    mode="lines",
-                    line=dict(width=2, color=color),
-                    fill="tozeroy",
-                    fillcolor=f"rgba({29 if close_delta_pct>=0 else 226},{158 if close_delta_pct>=0 else 74},{117 if close_delta_pct>=0 else 74},0.10)",
-                )
-            )
-            spark.update_layout(
-                margin=dict(l=0, r=0, t=4, b=0),
-                height=40,
-                xaxis=dict(visible=False),
-                yaxis=dict(visible=False),
-                showlegend=False,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-            )
-            st.plotly_chart(
-                spark,
-                config={"staticPlot": True, "displayModeBar": False},
-                use_container_width=True,
-                key=f"spark_close_{selected_ticker}",
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.markdown(f'''
+                <div class="kpi-card">
+                    <div class="kpi-label">Latest Close Price</div>
+                    <div class="kpi-value">₹{latest["close"]:,.2f}</div>
+                    <div style="margin-top: 8px; color:{color}; font-size:14px; font-weight:600;">{arrow} {abs(close_delta_pct):.2f}%</div>
+                </div>
+            ''', unsafe_allow_html=True)
 
-    with col2:
-        with st.container():
-            st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-            st.markdown('<div class="kpi-label">P/E ratio</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="kpi-value">{latest["pe_ratio"]:.2f}</div>', unsafe_allow_html=True)
-            if not pd.isna(sector_avg_pe):
-                st.markdown(
-                    f'<span class="badge-pe">Sector avg {sector_avg_pe:.1f}</span>',
-                    unsafe_allow_html=True,
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+        with col2:
+            st.markdown(f'''
+                <div class="kpi-card">
+                    <div class="kpi-label">P/E Ratio</div>
+                    <div class="kpi-value">{latest["pe_ratio"]:.2f}</div>
+                </div>
+            ''', unsafe_allow_html=True)
 
-    with col3:
-        with st.container():
-            st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-            st.markdown('<div class="kpi-label">Net profit margin</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="kpi-value">{latest["net_profit_margin_pct"]:.2f}%</div>', unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        with col3:
+            st.markdown(f'''
+                <div class="kpi-card">
+                    <div class="kpi-label">Net Profit Margin</div>
+                    <div class="kpi-value">{latest["net_profit_margin_pct"]:.2f}%</div>
+                </div>
+            ''', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+        # Main Chart
+        st.markdown("<br><h4 style='font-family: Oswald, sans-serif; color: var(--text-mid); font-weight: 400; font-size: 18px;'>PRICE TREND VS 7-DAY ROLLING AVERAGE</h4>", unsafe_allow_html=True)
 
-    # ---- MAIN PRICE CHART ----
-    st.markdown("#### 📉 Price trend vs 7-day rolling average")
+        y_min = min(history["close"].min(), history["rolling_7d_avg"].min()) * 0.97
+        y_max = max(history["close"].max(), history["rolling_7d_avg"].max()) * 1.03
 
-    sector_index = load_sector_index(days=30)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=history["date"], y=history["close"], mode="lines", name="Close Price",
+            line=dict(color=POSITIVE, width=2.5), fill="tozeroy", fillcolor="rgba(120, 184, 116, 0.08)"
+        ))
+        fig.add_trace(go.Scatter(
+            x=history["date"], y=history["rolling_7d_avg"], mode="lines", name="7-Day Avg",
+            line=dict(color=MUTED, width=1.5, dash="dash")
+        ))
+        if not sector_index.empty:
+            fig.add_trace(go.Scatter(
+                x=sector_index["date"], y=sector_index["sector_avg_close"], mode="lines", name="Sector Index",
+                line=dict(color=BENCHMARK, width=1.5, dash="dot"), opacity=0.7
+            ))
 
-    y_min = min(history["close"].min(), history["rolling_7d_avg"].min()) * 0.97
-    y_max = max(history["close"].max(), history["rolling_7d_avg"].max()) * 1.03
-
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x=history["date"],
-            y=history["close"],
-            mode="lines",
-            name="Close price",
-            line=dict(color=ACCENT, width=2.5),
-            fill="tozeroy",
-            fillcolor="rgba(55, 138, 221, 0.08)",
+        fig.update_layout(
+            height=420, margin=dict(l=10, r=10, t=10, b=10),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#a9c2bf", family="Inter"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            xaxis=dict(showgrid=False, color="#6f8b88"),
+            yaxis=dict(range=[y_min, y_max], showgrid=True, gridcolor="rgba(150,190,185,0.08)", color="#6f8b88"),
+            hovermode="x unified"
         )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=history["date"],
-            y=history["rolling_7d_avg"],
-            mode="lines",
-            name="7-day avg",
-            line=dict(color=MUTED, width=1.5, dash="dash"),
-        )
-    )
-
-    if not sector_index.empty:
-        fig.add_trace(
-            go.Scatter(
-                x=sector_index["date"],
-                y=sector_index["sector_avg_close"],
-                mode="lines",
-                name="Sector index",
-                line=dict(color=BENCHMARK, width=1.5, dash="dot"),
-                opacity=0.7,
-            )
-        )
-
-    fig.update_layout(
-        height=420,
-        margin=dict(l=10, r=10, t=10, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#c7cad1"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        xaxis=dict(showgrid=False, color="#8b8f9c"),
-        yaxis=dict(
-            range=[y_min, y_max],
-            showgrid=True,
-            gridcolor="rgba(255,255,255,0.05)",
-            color="#8b8f9c",
-        ),
-        hovermode="x unified",
-    )
-
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, key=f"chart_{ticker}")
 
 # ----------------------------------------------------------------------------
 # FOOTER
 # ----------------------------------------------------------------------------
-st.markdown(
-    """
-    <div class="footer">
-        <span>Data: Yahoo Finance · refreshed nightly via automated pipeline</span>
-        <a href="https://github.com/" target="_blank" style="color:#6b6f7a; text-decoration:none;">
-            🔗 View repo
-        </a>
+st.markdown("""
+<div class="footer">
+    <div>NIFTY IT Research Pipeline · Created by Abhinav Shandilya</div>
+    <div>
+        <a href="https://github.com/AbhinavShandilya13" target="_blank">GITHUB</a>
+        <a href="https://www.linkedin.com/in/abhinav-shandilya/" target="_blank">LINKEDIN</a>
+        <a href="https://abhinav-shandilya.vercel.app/" target="_blank">PORTFOLIO</a>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+</div>
+""", unsafe_allow_html=True)

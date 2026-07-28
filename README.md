@@ -1,121 +1,185 @@
-# NIFTY IT Automated Equity Research Pipeline
+# NIFTY IT Equity Research Data Pipeline
+
+## Table of Contents
+1. [Project Overview](#1-project-overview)
+2. [Architecture](#2-architecture)
+3. [Tech Stack](#3-tech-stack)
+4. [Data Pipeline (ETL) Deep Dive](#4-data-pipeline-etl-deep-dive)
+5. [Database Schema](#5-database-schema)
+6. [Streamlit App](#6-streamlit-app)
+7. [File and Folder Structure](#7-file-and-folder-structure)
+8. [Setup & Installation](#8-setup--installation)
+9. [Deployment](#9-deployment)
+10. [Challenges & Decisions](#10-challenges--decisions)
+11. [Future Improvements](#11-future-improvements)
+12. [License & Contact](#12-license--contact)
+
+---
 
 ## 1. Project Overview
+**What this project does:**  
+This project is an end-to-end automated Data Engineering pipeline that extracts, transforms, and visualizes financial data for top Indian IT companies. It fetches daily stock prices and fundamental metrics, performs data quality checks and imputations, calculates business metrics, and serves the results through a live interactive dashboard.
 
-This project is a production-grade **Data Engineering ETL (Extract, Transform, Load) Pipeline** designed to track the financial health and market performance of India's top NIFTY IT sector companies (Infosys, Tech Mahindra, Wipro, and HCLTech). 
+**Data Scope:**  
+Focuses on the **NIFTY IT** index components. Currently tracking:
+* Infosys (`INFY.NS`)
+* Tech Mahindra (`TECHM.NS`)
+* Wipro (`WIPRO.NS`)
+* HCL Technologies (`HCLTECH.NS`)
 
-Initially conceived as a standalone Python analytics script, it was refactored into a full-scale ETL architecture to solve critical business problems:
-- **Resiliency & Automation:** Scripts running in Jupyter Notebooks or triggered manually are fragile. By moving to a dedicated ETL flow designed for orchestration (e.g., Apache Airflow), the pipeline can run reliably on a schedule, decoupling data fetching from data consumption.
-- **Performance:** Directly querying a live API (like Yahoo Finance) every time a user opens a dashboard introduces massive latency and risks rate-limiting. This pipeline introduces a persistent PostgreSQL Data Warehouse layer. Heavy calculations are computed once during the nightly batch job, allowing the frontend dashboard to serve data instantly to end-users.
-- **Data Integrity:** Financial APIs frequently drop data or suffer outages. This pipeline introduces robust Data Quality checks, explicitly tracking and imputing missing data rather than silently failing or misleading traders.
+**Use Case / Audience:**  
+This project demonstrates production-grade Data Engineering capabilities. It is designed for recruiters, hiring managers, and data engineers to showcase expertise in Python ETL, Data Quality, SQL Upsert logic, Docker, Orchestration (Apache Airflow), Cloud Databases (Supabase), and Frontend visualization (Streamlit).
+
+---
 
 ## 2. Architecture
-
-The architecture strictly separates concerns across three layers: Extraction, Transformation, and Serving.
-
-### Data Flow
-1. **Extraction (`ingest.py`):** Connects to the `yfinance` API to pull daily OHLCV prices and fundamental metrics. It performs data quality checks (e.g., handling missing days, identifying market halts vs. API outages) and loads the raw data into PostgreSQL using idempotent UPSERTs.
-2. **Transformation (`transform.py`):** Reads the raw data from PostgreSQL, applies business logic (calculating 7-day rolling averages and net profit margins), joins price data with financial metrics, and writes the finalized, clean dataset into an analytics data mart.
-3. **Serving (`app.py`):** A Streamlit dashboard that connects directly to the PostgreSQL analytics table. It visualizes the pre-calculated metrics, trends, and pipeline metadata without ever touching the external internet.
-
-### Database Schema (PostgreSQL)
-
-The database (`equity_db`) contains four explicit tables:
-
-**1. `raw_prices` (Extraction Layer)**
-- `date` (DATE) - *Primary Key*
-- `ticker` (VARCHAR) - *Primary Key*
-- `open`, `high`, `low`, `close` (NUMERIC)
-- `volume` (BIGINT)
-- `data_status` (VARCHAR) - Added via migration. Tracks data provenance (`ACTUAL`, `MARKET_HALT`, or `IMPUTED_API_OUTAGE`).
-
-**2. `raw_financials` (Extraction Layer)**
-- `fetch_date` (DATE) - *Primary Key*
-- `ticker` (VARCHAR) - *Primary Key*
-- `trailing_pe` (NUMERIC)
-- `total_revenue` (NUMERIC)
-- `net_income` (NUMERIC)
-
-**3. `analytics_summary` (Transformation / Serving Layer)**
-- `date` (DATE) - *Primary Key*
-- `ticker` (VARCHAR) - *Primary Key*
-- `close_price` (NUMERIC)
-- `rolling_7d_avg` (NUMERIC)
-- `net_profit_margin_pct` (NUMERIC)
-- `pe_ratio` (NUMERIC)
-- `data_status` (VARCHAR)
-
-**4. `pipeline_logs` (Metadata Layer)**
-- `run_id` (SERIAL) - *Primary Key*
-- `execution_time` (TIMESTAMP)
-- `task_name` (VARCHAR)
-- `status` (VARCHAR)
-- `records_processed` (INT)
-- `error_message` (TEXT)
-
-### Design Decisions Evident in Code
-- **Idempotency & Conflict Resolution:** Both `ingest.py` and `transform.py` utilize PostgreSQL's `ON CONFLICT` constraints. `ingest.py` uses `ON CONFLICT DO NOTHING` to prevent duplicate raw records if re-run. `transform.py` uses `ON CONFLICT DO UPDATE` to safely overwrite existing analytics data with fresh calculations.
-- **Data Quality Imputation:** In `ingest.py`, if the market was open but `volume == 0`, it flags the `data_status` as `MARKET_HALT`. If a row is entirely missing, it forward-fills the last known close price and flags it as `IMPUTED_API_OUTAGE`. This prevents the UI from drawing misleading flat lines.
-- **Anomaly Tracking:** `ingest.py` tracks if a stock's price jumps or drops by >20% in a single day and logs a `WARNING` to `pipeline_logs` without failing the pipeline, accommodating legitimate events like stock splits.
-
-## 3. Setup & How to Run It
-
-### Prerequisites
-- Python 3.9+
-- PostgreSQL installed and running locally on port 5432.
-
-### 1. Environment Configuration
-Create a `.env` file in the root directory (alongside the Python scripts) with the following keys. Update `DB_PASSWORD` to match your local Postgres instance:
-```env
-DB_USER=postgres
-DB_PASSWORD=your_postgres_password
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=equity_db
+### High-Level System Architecture
+```mermaid
+flowchart LR
+    A[Yahoo Finance API] -->|yfinance| B(ingest.py)
+    B -->|Raw Prices & Financials| C[(Supabase PostgreSQL)]
+    C -->|Read Raw Data| D(transform.py)
+    D -->|Write Analytics| C
+    E[Apache Airflow Docker] -->|Schedules & Executes| B
+    E -->|Schedules & Executes| D
+    C -->|Reads Analytics Summary| F[Streamlit App]
+    F -->|Displays| G((End User))
 ```
 
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
+**Data Flow:**
+1. **Source:** Yahoo Finance API (`yfinance`).
+2. **Extraction:** Python scripts running inside Airflow Docker containers pull the data daily.
+3. **Storage (Raw):** Data is loaded into a Cloud PostgreSQL database (Supabase) using Upsert logic to prevent duplicates.
+4. **Transformation:** A second Python script pulls the raw data, applies business logic (rolling averages, profit margins), handles missing data (imputation), and writes back to an analytics table.
+5. **Visualization:** A Streamlit web application connects directly to Supabase to visualize the transformed data.
+
+**Tradeoffs Considered:**
+* *Python vs. dbt for Transformations:* Chose Python (Pandas) for transformations to easily handle complex time-series imputations and rolling averages, though dbt would be preferable for pure SQL environments.
+* *Supabase vs. Local Postgres:* Migrated from a local Docker Postgres to Supabase to enable a live, public Streamlit deployment without needing complex reverse proxies.
+
+---
+
+## 3. Tech Stack
+* **Language:** Python 3.x
+* **Orchestration:** Apache Airflow 2.8.1 (running via Docker Compose)
+* **Database:** PostgreSQL (Hosted on Supabase Cloud)
+* **Data Manipulation:** `pandas`
+* **Data Extraction:** `yfinance`
+* **Database ORM/Drivers:** `SQLAlchemy`, `psycopg2-binary`
+* **Visualization:** `streamlit`, `plotly`
+* **Config Management:** `python-dotenv`
+
+---
+
+## 4. Data Pipeline (ETL) Deep Dive
+### Extraction (`ingest.py`)
+* **Sources:** Fetches 1-month historical price data and trailing fundamentals (P/E, Revenue, Net Income) via `yfinance`.
+* **Data Quality (V2):** 
+    * Checks for 0-row API responses.
+    * Forward-fills missing close prices and flags them as `IMPUTED_API_OUTAGE`.
+    * Flags zero-volume days as `MARKET_HALT`.
+    * Detects >20% daily price swings (anomalies) and logs them as warnings (for potential stock splits).
+* **Idempotency:** Inserts into a temporary table first, then uses `ON CONFLICT (date, ticker) DO NOTHING` to guarantee duplicate-free runs.
+
+### Transformation (`transform.py`)
+* **Process:** Pulls from `raw_prices` and `raw_financials`.
+* **Business Logic:** 
+    * Calculates a **7-day rolling average** for close prices.
+    * Computes **Net Profit Margin %** entirely in SQL (`(net_income / NULLIF(total_revenue, 0)) * 100`).
+* **Loading:** Merges the price and financial dataframes and performs a bulk `ON CONFLICT DO UPDATE` into the `analytics_summary` table.
+
+### Orchestration (`dags/equity_pipeline_dag.py`)
+* **Structure:** A straightforward Airflow DAG utilizing `BashOperator`.
+* **Dependencies:** `run_ingestion` >> `run_transformation`.
+* **Scheduling:** Runs Monday through Friday at 23:00 UTC (`0 23 * * 1-5`).
+* **Retries:** Configured for 1 retry with a 5-minute delay.
+
+---
+
+## 5. Database Schema
+The project uses a standard star/snowflake hybrid model optimized for analytics.
+
+| Table | Columns | Primary Key | Description |
+|---|---|---|---|
+| `raw_prices` | date, ticker, open, high, low, close, volume, data_status | (date, ticker) | Daily OHLCV data directly from API |
+| `raw_financials` | fetch_date, ticker, trailing_pe, total_revenue, net_income | (fetch_date, ticker) | Slowly changing fundamental metrics |
+| `analytics_summary` | date, ticker, close_price, rolling_7d_avg, net_profit_margin_pct, pe_ratio, data_status | (date, ticker) | The golden table serving the Streamlit frontend |
+| `pipeline_logs` | run_id, execution_time, task_name, status, records_processed, error_message | run_id | Custom audit table for pipeline runs and DQ alerts |
+
+---
+
+## 6. Streamlit App
+The dashboard (`app.py`) is designed for executives and analysts:
+* **Sidebar:** Features a dynamic "Pipeline Sync Status" indicator that queries `pipeline_logs` to ensure data is fresh. Allows ticker selection.
+* **KPI Cards:** Displays the latest Close Price (with Day-over-Day delta and Plotly sparkline), P/E Ratio (with Sector Average benchmark), and Net Profit Margin.
+* **Alerts:** Dynamically surfaces warnings if the selected date's data was imputed due to API outages or market halts.
+* **Main Chart:** A Plotly line chart comparing the stock's Close Price against its 7-Day Rolling Average and the broader NIFTY IT Sector Index.
+
+---
+
+## 7. File and Folder Structure
+```text
+/Fin
+├── app.py                      # The Streamlit dashboard application
+├── ingest.py                   # Data extraction script (Yahoo Finance -> Raw DB)
+├── transform.py                # Data transformation script (Raw DB -> Analytics DB)
+├── create_tables.sql           # DDL script for initializing PostgreSQL tables
+├── docker-compose.yaml         # Official Airflow Docker Compose configuration
+├── requirements.txt            # Python dependencies
+├── .env                        # Environment variables (Database credentials)
+└── dags/
+    └── equity_pipeline_dag.py  # Airflow DAG definition
 ```
 
-### 3. Database Initialization
-Connect to your PostgreSQL server (e.g., via pgAdmin or `psql`) and create an empty database named `equity_db`.
-Then, execute the schema files in this exact order:
-1. Run `create_tables.sql`
-2. Run `update_schema.sql` (Applies the V2 data status columns)
+---
 
-### 4. Pipeline Execution Order
-To manually trigger the ETL process:
-1. **Extract & Load:** Run `python ingest.py`
-2. **Transform:** Run `python transform.py`
-3. **Serve:** Run `streamlit run app.py`
+## 8. Setup & Installation
+### Local Setup
+1. **Clone the repository.**
+2. **Create a `.env` file** in the root directory:
+   ```env
+   DB_USER=postgres.your_supabase_project_id
+   DB_PASSWORD=YourDatabasePassword
+   DB_HOST=aws-0-ap-northeast-1.pooler.supabase.com
+   DB_PORT=6543
+   DB_NAME=postgres
+   AIRFLOW_UID=50000
+   ```
+3. **Initialize Database Schema:** Run the contents of `create_tables.sql`, then manually run `ALTER TABLE raw_prices ADD COLUMN data_status VARCHAR(50);` to patch V2 DQ features.
+4. **Start Airflow:** Run `docker compose up -d`.
+5. **Trigger Pipeline:** Navigate to `http://localhost:8080` (login: airflow/airflow) and unpause/trigger the `nifty_it_equity_pipeline` DAG.
+6. **Run Streamlit Locally:** 
+   ```bash
+   pip install -r requirements.txt
+   streamlit run app.py
+   ```
 
-## 4. Current Functionality
+---
 
-The codebase currently successfully implements:
-- **Multi-Ticker Ingestion:** Iterates through `["INFY.NS", "TECHM.NS", "WIPRO.NS", "HCLTECH.NS"]` and pulls the last 30 days of market data via `yfinance`.
-- **SQL-Based Math:** `transform.py` executes complex mathematical derivations (like `(net_income / NULLIF(total_revenue, 0)) * 100 as net_profit_margin_pct`) directly in the PostgreSQL warehouse rather than in memory.
-- **UI Data Quality Alerts:** The Streamlit dashboard (`app.py`) dynamically reads the `data_status` column and renders a visual warning banner if the trader is viewing imputed or halted data.
-- **Sector Benchmarking:** The dashboard dynamically groups and averages the 4 tickers into a "Sector Index", plotting it as a dashed baseline against individual stock performance.
-- **Live Sync Status:** The dashboard queries `pipeline_logs` to display exactly how long ago the pipeline succeeded (e.g., "Synced 2 hours ago"), utilizing a glowing CSS status dot.
-- **Sparklines & Deltas:** The UI dynamically calculates day-over-day `%` change for the Close Price and plots static Plotly sparklines inside custom CSS metric cards.
+## 9. Deployment
+* **Database:** Hosted on **Supabase**. Connected using Supabase's IPv4 connection pooler (Port 6543) in Session Mode.
+* **Frontend:** Deployed on **Streamlit Community Cloud** directly from GitHub.
+* **Secrets Management:** Database credentials are securely injected via Streamlit's `Advanced Settings -> Secrets` manager.
+* **Orchestration:** Airflow runs locally via Docker, continuously pushing fresh data to the cloud database.
 
-## 5. Known Limitations / Future Enhancements
+---
 
-Based on the current codebase, the following limitations exist:
-- **No Automated Schema Drift Detection:** The pipeline implicitly trusts the JSON structure returned by `yfinance`. There is no contract validation (like Pydantic or Great Expectations) to fail gracefully if the API suddenly renames a key like `trailingPE`.
-- **Manual Execution (Pending Docker/Airflow):** The pipeline currently requires manual execution of the Python scripts. While an `airflow_execution_guide.md` exists outlining the DAG code (`equity_pipeline_dag.py`) and Docker requirements, it is not yet fully integrated into a running container environment in this repository.
-- **Secrets Management:** The Streamlit UI utilizes standard `os.getenv` via `.env` rather than Streamlit's native `st.secrets` manager, which would need refactoring before deploying to Streamlit Community Cloud.
+## 10. Challenges & Decisions
+1. **Docker / Windows Networking:** Encountered limitations with Supabase's direct connection (Port 5432) requiring IPv6, which Docker Desktop on Windows struggles with. *Solution:* Pivoted to the Supabase Connection Pooler on Port 6543, which natively supports IPv4.
+2. **SQLAlchemy Password Encoding:** Passwords containing special characters (`@`) caused SQL connection parsing errors. *Solution:* Utilized `sqlalchemy.engine.URL.create()` to safely encode the connection string dynamically.
+3. **Supabase ECIRCUITBREAKER:** Heavy retry attempts during initial password failures triggered Supabase's anti-brute-force firewall. *Solution:* Changed the master DB password to avoid special characters entirely and implemented structured backoff logging.
+4. **Idempotency:** Implemented `ON CONFLICT DO UPDATE` (Upsert) logic rather than basic appends. This allows the Airflow DAG to be safely rerun multiple times a day without duplicating data.
 
-## 6. Tech Stack
+---
 
-Derived directly from `requirements.txt` and import statements:
-- **Core Language:** Python
-- **Orchestration / Architecture:** Apache Airflow (DAG designed in `airflow_execution_guide.md`)
-- **Data Warehouse:** PostgreSQL (connected via `psycopg2-binary` and `SQLAlchemy`)
-- **Data Manipulation:** `pandas`
-- **External API:** `yfinance`
-- **Frontend / Serving:** `streamlit`
-- **Visualization:** `plotly` (`plotly.graph_objects`)
-- **Configuration:** `python-dotenv`
+## 11. Future Improvements
+* **DBT Integration:** Migrate the Pandas transformation logic (`transform.py`) into dbt models for better lineage and testing.
+* **Cloud Orchestration:** Move the Airflow instance from local Docker to AWS Managed Workflows for Apache Airflow (MWAA) or Astronomer for a 100% cloud-native architecture.
+* **Technical Indicators:** Add RSI, MACD, and Bollinger Bands to the Streamlit visualization.
+* **CI/CD:** Add GitHub Actions to run linting and unit tests on pushes.
+
+---
+
+## 12. License & Contact
+Developed by **Abhinav Shandilya**.  
+Feel free to reach out or open issues if you have suggestions or questions about the pipeline architecture!
