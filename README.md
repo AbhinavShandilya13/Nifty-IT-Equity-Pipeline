@@ -1,38 +1,24 @@
-# NIFTY IT Equity Research Data Pipeline
+# 📈 NIFTY IT Equity Research Data Pipeline
 
-## Table of Contents
-1. [Project Overview](#1-project-overview)
-2. [Architecture](#2-architecture)
-3. [Tech Stack](#3-tech-stack)
-4. [Data Pipeline (ETL) Deep Dive](#4-data-pipeline-etl-deep-dive)
-5. [Database Schema](#5-database-schema)
-6. [Streamlit App](#6-streamlit-app)
-7. [File and Folder Structure](#7-file-and-folder-structure)
-8. [Setup & Installation](#8-setup--installation)
-9. [Deployment](#9-deployment)
-10. [Challenges & Decisions](#10-challenges--decisions)
-11. [Future Improvements](#11-future-improvements)
-12. [License & Contact](#12-license--contact)
+## 📌 Project Background
 
----
-
-## 1. Project Overview
 **What this project does:**  
 This project is an end-to-end automated Data Engineering pipeline that extracts, transforms, and visualizes financial data for top Indian IT companies. It fetches daily stock prices and fundamental metrics, performs data quality checks and imputations, calculates business metrics, and serves the results through a live interactive dashboard.
 
 **Data Scope:**  
 Focuses on the **NIFTY IT** index components. Currently tracking:
-* Infosys (`INFY.NS`)
-* Tech Mahindra (`TECHM.NS`)
-* Wipro (`WIPRO.NS`)
-* HCL Technologies (`HCLTECH.NS`)
+* 🟢 Infosys (`INFY.NS`)
+* 🟠 Tech Mahindra (`TECHM.NS`)
+* 🔵 Wipro (`WIPRO.NS`)
+* 🟣 HCL Technologies (`HCLTECH.NS`)
 
 **Use Case / Audience:**  
-This project demonstrates production-grade Data Engineering capabilities. It is designed for recruiters, hiring managers, and data engineers to showcase expertise in Python ETL, Data Quality, SQL Upsert logic, Docker, Orchestration (Apache Airflow), Cloud Databases (Supabase), and Frontend visualization (Streamlit).
+This project demonstrates **production-grade Data Engineering capabilities**. It is designed to showcase expertise in Python ETL, Data Quality, SQL Upsert logic, Docker, Orchestration (Apache Airflow), Cloud Databases (Supabase), and Frontend visualization (Streamlit).
 
 ---
 
-## 2. Architecture
+## 🏗️ Architecture & Data Flow
+
 ### High-Level System Architecture
 ```mermaid
 flowchart LR
@@ -59,7 +45,8 @@ flowchart LR
 
 ---
 
-## 3. Tech Stack
+## 🛠️ Tech Stack
+
 * **Language:** Python 3.x
 * **Orchestration:** Apache Airflow 2.8.1 (running via Docker Compose)
 * **Database:** PostgreSQL (Hosted on Supabase Cloud)
@@ -71,8 +58,9 @@ flowchart LR
 
 ---
 
-## 4. Data Pipeline (ETL) Deep Dive
-### Extraction (`ingest.py`)
+## ⚙️ Data Pipeline (ETL) Deep Dive
+
+### 📥 Extraction (`ingest.py`)
 * **Sources:** Fetches 1-month historical price data and trailing fundamentals (P/E, Revenue, Net Income) via `yfinance`.
 * **Data Quality (V2):** 
     * Checks for 0-row API responses.
@@ -81,14 +69,14 @@ flowchart LR
     * Detects >20% daily price swings (anomalies) and logs them as warnings (for potential stock splits).
 * **Idempotency:** Inserts into a temporary table first, then uses `ON CONFLICT (date, ticker) DO NOTHING` to guarantee duplicate-free runs.
 
-### Transformation (`transform.py`)
+### 🔄 Transformation (`transform.py`)
 * **Process:** Pulls from `raw_prices` and `raw_financials`.
 * **Business Logic:** 
     * Calculates a **7-day rolling average** for close prices.
     * Computes **Net Profit Margin %** entirely in SQL (`(net_income / NULLIF(total_revenue, 0)) * 100`).
 * **Loading:** Merges the price and financial dataframes and performs a bulk `ON CONFLICT DO UPDATE` into the `analytics_summary` table.
 
-### Orchestration (`dags/equity_pipeline_dag.py`)
+### ⏱️ Orchestration (`dags/equity_pipeline_dag.py`)
 * **Structure:** A straightforward Airflow DAG utilizing `BashOperator`.
 * **Dependencies:** `run_ingestion` >> `run_transformation`.
 * **Scheduling:** Runs Monday through Friday at 23:00 UTC (`0 23 * * 1-5`).
@@ -96,7 +84,8 @@ flowchart LR
 
 ---
 
-## 5. Database Schema
+## 🧱 Database Schema
+
 The project uses a standard star/snowflake hybrid model optimized for analytics.
 
 | Table | Columns | Primary Key | Description |
@@ -108,8 +97,21 @@ The project uses a standard star/snowflake hybrid model optimized for analytics.
 
 ---
 
-## 6. Streamlit App
+## 🎯 The Outcome
+
+- **Automated Pipeline:** Deployed a nightly batch pipeline for NIFTY IT equities to automate financial data ingestion, validation, and reconciliation.
+- **Robust Failure Handling:** Detects 0-row API responses and flags missing prices as imputed/API outage events, alongside marking zero-volume days as market-halt events.
+- **Anomaly Detection:** Safeguards data integrity by detecting daily price swings greater than **20%** as anomalies.
+- **Single Source of Truth:** Establishes a reliable data foundation, surfacing all verified metrics through an interactive Streamlit dashboard.
+
+---
+
+## 📊 Streamlit App
+
 The dashboard (`app.py`) is designed for executives and analysts:
+
+![Dashboard Preview](./Final.png)
+
 * **Sidebar:** Features a dynamic "Pipeline Sync Status" indicator that queries `pipeline_logs` to ensure data is fresh. Allows ticker selection.
 * **KPI Cards:** Displays the latest Close Price (with Day-over-Day delta and Plotly sparkline), P/E Ratio (with Sector Average benchmark), and Net Profit Margin.
 * **Alerts:** Dynamically surfaces warnings if the selected date's data was imputed due to API outages or market halts.
@@ -117,7 +119,8 @@ The dashboard (`app.py`) is designed for executives and analysts:
 
 ---
 
-## 7. File and Folder Structure
+## 📂 File and Folder Structure
+
 ```text
 /Fin
 ├── app.py                      # The Streamlit dashboard application
@@ -133,7 +136,8 @@ The dashboard (`app.py`) is designed for executives and analysts:
 
 ---
 
-## 8. Setup & Installation
+## 🚀 Setup & Installation
+
 ### Local Setup
 1. **Clone the repository.**
 2. **Create a `.env` file** in the root directory:
@@ -156,7 +160,8 @@ The dashboard (`app.py`) is designed for executives and analysts:
 
 ---
 
-## 9. Deployment
+## 🌐 Deployment
+
 * **Database:** Hosted on **Supabase**. Connected using Supabase's IPv4 connection pooler (Port 6543) in Session Mode.
 * **Frontend:** Deployed on **Streamlit Community Cloud** directly from GitHub.
 * **Secrets Management:** Database credentials are securely injected via Streamlit's `Advanced Settings -> Secrets` manager.
@@ -164,7 +169,8 @@ The dashboard (`app.py`) is designed for executives and analysts:
 
 ---
 
-## 10. Challenges & Decisions
+## 🧠 Challenges & Decisions
+
 1. **Docker / Windows Networking:** Encountered limitations with Supabase's direct connection (Port 5432) requiring IPv6, which Docker Desktop on Windows struggles with. *Solution:* Pivoted to the Supabase Connection Pooler on Port 6543, which natively supports IPv4.
 2. **SQLAlchemy Password Encoding:** Passwords containing special characters (`@`) caused SQL connection parsing errors. *Solution:* Utilized `sqlalchemy.engine.URL.create()` to safely encode the connection string dynamically.
 3. **Supabase ECIRCUITBREAKER:** Heavy retry attempts during initial password failures triggered Supabase's anti-brute-force firewall. *Solution:* Changed the master DB password to avoid special characters entirely and implemented structured backoff logging.
@@ -172,7 +178,8 @@ The dashboard (`app.py`) is designed for executives and analysts:
 
 ---
 
-## 11. Future Improvements
+## 🔮 Future Improvements
+
 * **DBT Integration:** Migrate the Pandas transformation logic (`transform.py`) into dbt models for better lineage and testing.
 * **Cloud Orchestration:** Move the Airflow instance from local Docker to AWS Managed Workflows for Apache Airflow (MWAA) or Astronomer for a 100% cloud-native architecture.
 * **Technical Indicators:** Add RSI, MACD, and Bollinger Bands to the Streamlit visualization.
@@ -180,6 +187,7 @@ The dashboard (`app.py`) is designed for executives and analysts:
 
 ---
 
-## 12. License & Contact
+## 📬 License & Contact
+
 Developed by **Abhinav Shandilya**.  
 Feel free to reach out or open issues if you have suggestions or questions about the pipeline architecture!
